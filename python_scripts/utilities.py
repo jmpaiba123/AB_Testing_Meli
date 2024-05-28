@@ -3,7 +3,13 @@ import pandas as pd
 import numpy as np
 import seaborn as sns; sns.set()
 import matplotlib.pyplot as plt
+import warnings
+import logging
+
+from bayesian_testing.experiments import DiscreteDataTest
 from bayesian_testing.experiments import BinaryDataTest
+
+
 
 
 def str_to_dict(exp_str):
@@ -55,6 +61,12 @@ def calculate_psi(expected, actual):
 def analisis_experimento(df,nombre_experimento):
     df_filtered = df[df.experiment == nombre_experimento]
 
+    # Suppress matplotlib informational messages
+    logging.getLogger('matplotlib.category').setLevel(logging.ERROR)
+
+    # Suppress SettingWithCopyWarning warnings
+    warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
+
 
     result = df_filtered.groupby('date').agg({
         'experiment': 'first',
@@ -83,7 +95,7 @@ def analisis_experimento(df,nombre_experimento):
     custom_palette = sns.color_palette("tab10", df_filtered['variant'].nunique())
 
     # Create a figure and a set of subplots
-    fig = plt.figure(figsize=(14, 7))
+    fig = plt.figure(figsize=(12, 6))
     gs = fig.add_gridspec(2, 1, height_ratios=[1, 1])  # Create a 2-row grid
 
     # Create the first subplot for the line graph
@@ -126,8 +138,35 @@ def analisis_experimento(df,nombre_experimento):
 
     plt.tight_layout()
     plt.show()
+    return
 
 
+def AB_test_discreto(df,nombre_experimento):
+
+    unique_variants = df[df.experiment == nombre_experimento].variant.unique()
+
+    discrete_test = DiscreteDataTest([0,1])
+    # Loop through each unique variant and add its data to discrete_test
+    for variant in unique_variants:
+        variant_data = df[(df.experiment == nombre_experimento) & (df.variant == variant)].purchase_funnel_flag.values
+        discrete_test.add_variant_data(str(variant), variant_data)
+
+    results_ealuation = discrete_test.evaluate()
+    print(pd.DataFrame(results_ealuation).to_markdown(tablefmt="grid", index=False))
 
     return
 
+def AB_test_binario(df,nombre_experimento):
+    conv_test = BinaryDataTest()
+
+    unique_variants = df[df.experiment == nombre_experimento].variant.unique()
+
+    # Loop through each unique variant and add its data to discrete_test
+    for variant in unique_variants:
+        variant_data = df[(df.experiment == nombre_experimento) & (df.variant == variant)].purchase_funnel_flag.values
+        conv_test.add_variant_data(str(variant), variant_data)
+
+    results_evaluation_binary = conv_test.evaluate()
+    print(pd.DataFrame(results_evaluation_binary).to_markdown(tablefmt="grid", index=False))
+
+    return
