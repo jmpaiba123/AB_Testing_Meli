@@ -1,172 +1,179 @@
 import pandas as pd
-import pandas as pd
 import numpy as np
-import seaborn as sns; sns.set()
+import seaborn as sns
 import matplotlib.pyplot as plt
 import warnings
 import logging
+from bayesian_testing.experiments import DiscreteDataTest, BinaryDataTest
 
-from bayesian_testing.experiments import DiscreteDataTest
-from bayesian_testing.experiments import BinaryDataTest
-
-
+sns.set()
 
 
-def str_to_dict(exp_str):
-    """
-    funcion convertir en str un diccionario
-    exp_str: es la variable sobre la cual se desea operar
-    """
-    # Remove the curly braces
-    exp_str = exp_str.strip('{}')
-    # Split into key-value pairs
-    pairs = exp_str.split(', ')
-    # Split each pair and convert to dictionary
-    exp_dict = {}
-    for pair in pairs:
-        key, value = pair.split('=')
-        exp_dict[key] = value
-    return exp_dict
+class AnalisisExperimento:
+    def __init__(self, df):
+        """
+        Inicializa la clase AnalisisExperimento.
 
+        Parámetros:
+        df (pd.DataFrame): DataFrame que contiene los datos experimentales.
+        """
+        self.df = df
 
-def explode_dict(row):
-    """
-    funcion para abrir diccionario
-    """
-    dict_items = row['experiments_dict'].items()
-    expanded_rows = []
-    for key, value in dict_items:
-        new_row = row.copy()
-        new_row['experiment_key'] = key
-        new_row['experiment_value'] = value
-        expanded_rows.append(new_row)
-    return pd.DataFrame(expanded_rows)
+    @staticmethod
+    def str_to_dict(exp_str):
+        """
+        Convierte una representación de cadena de un diccionario a un diccionario real.
 
+        Parámetros:
+        exp_str (str): La representación en cadena del diccionario.
 
-# Function to calculate PSI
-def calculate_psi(expected, actual):
-    # Handling division by zero
-    epsilon = 1e-10
-    
-    # Calculate expected and actual proportions
-    expected_prop = np.array(expected) / sum(expected)
-    actual_prop = np.array(actual) / sum(actual)
-    
-    # Calculate PSI
-    psi = sum((expected_prop - actual_prop) * np.log((expected_prop + epsilon) / (actual_prop + epsilon)))
-    
-    return psi
+        Retorna:
+        dict: El diccionario convertido.
+        """
+        exp_str = exp_str.strip('{}')
+        pairs = exp_str.split(', ')
+        exp_dict = {key: value for key, value in (pair.split('=') for pair in pairs)}
+        return exp_dict
 
+    @staticmethod
+    def explode_dict(row):
+        """
+        Expande un diccionario almacenado en una fila de un DataFrame en filas separadas.
 
-def analisis_experimento(df,nombre_experimento):
-    df_filtered = df[df.experiment == nombre_experimento]
+        Parámetros:
+        row (pd.Series): La fila del DataFrame que contiene el diccionario.
 
-    # Suppress matplotlib informational messages
-    logging.getLogger('matplotlib.category').setLevel(logging.ERROR)
+        Retorna:
+        pd.DataFrame: El DataFrame expandido.
+        """
+        dict_items = row['experiments_dict'].items()
+        expanded_rows = [
+            {**row, 'experiment_key': key, 'experiment_value': value}
+            for key, value in dict_items
+        ]
+        return pd.DataFrame(expanded_rows)
 
-    # Suppress SettingWithCopyWarning warnings
-    warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
+    @staticmethod
+    def calcular_psi(esperado, actual):
+        """
+        Calcula el Índice de Estabilidad de Población (PSI) entre dos distribuciones.
 
+        Parámetros:
+        esperado (list): La distribución esperada.
+        actual (list): La distribución actual.
 
-    result = df_filtered.groupby('date').agg({
-        'experiment': 'first',
-        'variant': lambda x: x.unique().tolist(),
-        'participation_percent': lambda x: x.tolist(), 
-        'participants': 'sum',
-        'buy_rate_percent': lambda x: x.tolist(), 
-        'buy_rate': 'mean'}).reset_index()
+        Retorna:
+        float: El valor PSI calculado.
+        """
+        epsilon = 1e-10
+        proporcion_esperada = np.array(esperado) / sum(esperado)
+        proporcion_actual = np.array(actual) / sum(actual)
+        psi = sum((proporcion_esperada - proporcion_actual) * np.log((proporcion_esperada + epsilon) / (proporcion_actual + epsilon)))
+        return psi
 
-    result['participation_percent'] = result['participation_percent'].apply(lambda x: [round(i, 2) for i in x])
+    def analisis_experimento(self, nombre_experimento):
+        """
+        Realiza un análisis en el experimento especificado.
 
-    # Names of variants each day
-    print(result.to_string(index=False))
+        Parámetros:
+        nombre_experimento (str): El nombre del experimento a analizar.
 
-    print("")
+        Retorna:
+        None
+        """
+        df_filtrado = self.df[self.df.experiment == nombre_experimento]
 
-        # Get participation percentages for the first and second vectors from the DataFrame
-    expected_participation_percent = result['participation_percent'].iloc[0]
-    actual_participation_percent = result['participation_percent'].iloc[1]
+        # Suprimir mensajes informativos de matplotlib
+        logging.getLogger('matplotlib.category').setLevel(logging.ERROR)
+        warnings.simplefilter(action='ignore', category=pd.errors.SettingWithCopyWarning)
 
-    # Calculate PSI
-    psi = calculate_psi(expected_participation_percent, actual_participation_percent)
-    print("Population Stability Index (PSI) between first and second vectors:", psi)
+        resultado = df_filtrado.groupby('date').agg({
+            'experiment': 'first',
+            'variant': lambda x: x.unique().tolist(),
+            'participation_percent': lambda x: x.tolist(),
+            'participants': 'sum',
+            'buy_rate_percent': lambda x: x.tolist(),
+            'buy_rate': 'mean'
+        }).reset_index()
 
-    # Define a custom palette
-    custom_palette = sns.color_palette("tab10", df_filtered['variant'].nunique())
+        resultado['participation_percent'] = resultado['participation_percent'].apply(lambda x: [round(i, 2) for i in x])
 
-    # Create a figure and a set of subplots
-    fig = plt.figure(figsize=(12, 6))
-    gs = fig.add_gridspec(2, 1, height_ratios=[1, 1])  # Create a 2-row grid
+        print(resultado.to_string(index=False))
+        print("")
 
-    # Create the first subplot for the line graph
-    ax1 = fig.add_subplot(gs[0, 0])
-    ax1.set_facecolor('white')  # set background color to white
+        participacion_esperada = resultado['participation_percent'].iloc[0]
+        participacion_actual = resultado['participation_percent'].iloc[1]
 
-    # Plot the line graph on the primary y-axis
-    sns.lineplot(data=df_filtered, x='date', y='buy_rate', hue='variant', marker='o', ax=ax1, palette=custom_palette)
-    ax1.set_ylabel('Buy Rate')
-    ax1.set_title('Buy Rate Each Day by Variant: ' + nombre_experimento)
-    ax1.legend(loc='upper right', bbox_to_anchor=(1.15, 1))
+        psi = self.calcular_psi(participacion_esperada, participacion_actual)
+        print("Índice de Estabilidad de Población (PSI) entre el primer y segundo vector:", psi)
 
-    # Set y-axis limit to double the maximum rate
-    max_rate = df_filtered['buy_rate'].max()
-    ax1.set_ylim(0, max_rate * 2)
+        paleta_personalizada = sns.color_palette("tab10", df_filtrado['variant'].nunique())
 
-    # Create a second subplot for the bar graph
-    ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)  # Share x-axis with ax1
-    ax2.set_facecolor('white')  # set background color to white
+        fig = plt.figure(figsize=(12, 6))
+        gs = fig.add_gridspec(2, 1, height_ratios=[1, 1])
 
-    # Plot the bar graph on the secondary y-axis
-    sns.barplot(data=df_filtered, x='date', y='participants', hue='variant', dodge=True, alpha=0.6, ax=ax2, palette=custom_palette)
-    ax2.set_ylabel('Participants')
-    ax2.set_title('Participants Each Day by Variant')
+        ax1 = fig.add_subplot(gs[0, 0])
+        ax1.set_facecolor('white')
+        sns.lineplot(data=df_filtrado, x='date', y='buy_rate', hue='variant', marker='o', ax=ax1, palette=paleta_personalizada)
+        ax1.set_ylabel('Tasa de Compra')
+        ax1.set_title(f'Tasa de Compra por Día por Variante: {nombre_experimento}')
+        ax1.legend(loc='upper right', bbox_to_anchor=(1.15, 1))
+        ax1.set_ylim(0, df_filtrado['buy_rate'].max() * 2)
 
-    # Add text annotations for participation percent above each bar
-    for p in ax2.patches:
-        ax2.annotate('{:.1f}'.format(p.get_height()), (p.get_x() + p.get_width() / 2., p.get_height()),
-                    ha='center', va='center', fontsize=10, color='black', xytext=(0, 10),
-                    textcoords='offset points')
+        ax2 = fig.add_subplot(gs[1, 0], sharex=ax1)
+        ax2.set_facecolor('white')
+        sns.barplot(data=df_filtrado, x='date', y='participants', hue='variant', dodge=True, alpha=0.6, ax=ax2, palette=paleta_personalizada)
+        ax2.set_ylabel('Participantes')
+        ax2.set_title('Participantes por Día por Variante')
 
-    # Adjust the legend
-    ax2.legend(loc='upper right', bbox_to_anchor=(1.15, 1))
+        for p in ax2.patches:
+            ax2.annotate(f'{p.get_height():.1f}', (p.get_x() + p.get_width() / 2., p.get_height()), ha='center', va='center', fontsize=10, color='black', xytext=(0, 10), textcoords='offset points')
 
-    # Synchronize x-axis ticks and grid lines
-    ax1.xaxis.set_tick_params(rotation=0)
-    ax2.xaxis.set_tick_params(rotation=0)
-    ax1.grid(True)
-    ax2.grid(True)
+        ax2.legend(loc='upper right', bbox_to_anchor=(1.15, 1))
+        ax1.xaxis.set_tick_params(rotation=0)
+        ax2.xaxis.set_tick_params(rotation=0)
+        ax1.grid(True)
+        ax2.grid(True)
 
-    plt.tight_layout()
-    plt.show()
-    return
+        plt.tight_layout()
+        plt.show()
 
+    def ab_test_discreto(self, nombre_experimento):
+        """
+        Realiza un análisis de prueba AB discreta en el experimento especificado.
 
-def AB_test_discreto(df,nombre_experimento):
+        Parámetros:
+        nombre_experimento (str): El nombre del experimento a analizar.
 
-    unique_variants = df[df.experiment == nombre_experimento].variant.unique()
+        Retorna:
+        None
+        """
+        variantes_unicas = self.df[self.df.experiment == nombre_experimento].variant.unique()
+        prueba_discreta = DiscreteDataTest([0, 1])
 
-    discrete_test = DiscreteDataTest([0,1])
-    # Loop through each unique variant and add its data to discrete_test
-    for variant in unique_variants:
-        variant_data = df[(df.experiment == nombre_experimento) & (df.variant == variant)].purchase_funnel_flag.values
-        discrete_test.add_variant_data(str(variant), variant_data)
+        for variante in variantes_unicas:
+            datos_variante = self.df[(self.df.experiment == nombre_experimento) & (self.df.variant == variante)].purchase_funnel_flag.values
+            prueba_discreta.add_variant_data(str(variante), datos_variante)
 
-    results_ealuation = discrete_test.evaluate()
-    print(pd.DataFrame(results_ealuation).to_markdown(tablefmt="grid", index=False))
+        resultados_evaluacion = prueba_discreta.evaluate()
+        print(pd.DataFrame(resultados_evaluacion).to_markdown(tablefmt="grid", index=False))
 
-    return
+    def ab_test_binario(self, nombre_experimento):
+        """
+        Realiza un análisis de prueba AB binaria en el experimento especificado.
 
-def AB_test_binario(df,nombre_experimento):
-    conv_test = BinaryDataTest()
+        Parámetros:
+        nombre_experimento (str): El nombre del experimento a analizar.
 
-    unique_variants = df[df.experiment == nombre_experimento].variant.unique()
+        Retorna:
+        None
+        """
+        prueba_binaria = BinaryDataTest()
+        variantes_unicas = self.df[self.df.experiment == nombre_experimento].variant.unique()
 
-    # Loop through each unique variant and add its data to discrete_test
-    for variant in unique_variants:
-        variant_data = df[(df.experiment == nombre_experimento) & (df.variant == variant)].purchase_funnel_flag.values
-        conv_test.add_variant_data(str(variant), variant_data)
+        for variante in variantes_unicas:
+            datos_variante = self.df[(self.df.experiment == nombre_experimento) & (self.df.variant == variante)].purchase_funnel_flag.values
+            prueba_binaria.add_variant_data(str(variante), datos_variante)
 
-    results_evaluation_binary = conv_test.evaluate()
-    print(pd.DataFrame(results_evaluation_binary).to_markdown(tablefmt="grid", index=False))
-
-    return
+        resultados_evaluacion_binaria = prueba_binaria.evaluate()
+        print(pd.DataFrame(resultados_evaluacion_binaria).to_markdown(tablefmt="grid", index=False))
