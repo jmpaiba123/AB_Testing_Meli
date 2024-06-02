@@ -8,7 +8,6 @@ from bayesian_testing.experiments import DiscreteDataTest, BinaryDataTest
 
 sns.set()
 
-
 class AnalisisExperimento:
     def __init__(self, df):
         """
@@ -137,6 +136,31 @@ class AnalisisExperimento:
 
         plt.tight_layout()
         plt.show()
+
+    def default_count(self, nombre_experimento):
+        """
+        Realiza un análisis en el experimento especificado.
+
+        Parámetros:
+        nombre_experimento (str): El nombre del experimento a analizar.
+
+        Retorna:
+        DataFrame: Un DataFrame con el resultado del análisis.
+        """
+        # Filtrar el DataFrame por el experimento especificado
+        df_filtrado = self.df[self.df.experiment == nombre_experimento]
+        # Agrupar y agregar los datos
+        resultado = df_filtrado.groupby('date').agg(
+            total_participants=('participants', 'sum'),
+            total_purchases=('purchases', 'sum'),
+            default_participants=('participants', lambda x: x[df_filtrado['variant'] == 'DEFAULT'].sum()),
+            default_count=('variant', lambda x: (x == 'DEFAULT').sum())
+        ).reset_index()
+
+        # Calcular el porcentaje de participantes por día en DEFAULT
+        resultado['default_participation_percent'] = (resultado['default_participants'] / resultado['total_participants']) * 100
+
+        return resultado
 
     def ab_test_discreto(self, nombre_experimento):
         """
