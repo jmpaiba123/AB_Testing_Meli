@@ -147,20 +147,73 @@ class AnalisisExperimento:
         Retorna:
         DataFrame: Un DataFrame con el resultado del análisis.
         """
-        # Filtrar el DataFrame por el experimento especificado
+            # Filtrar el DataFrame por el experimento especificado
         df_filtrado = self.df[self.df.experiment == nombre_experimento]
-        # Agrupar y agregar los datos
-        resultado = df_filtrado.groupby('date').agg(
+        
+        # Agrupar y agregar los datos por día
+        resultado_diario = df_filtrado.groupby('date').agg(
             total_participants=('participants', 'sum'),
             total_purchases=('purchases', 'sum'),
             default_participants=('participants', lambda x: x[df_filtrado['variant'] == 'DEFAULT'].sum()),
-            default_count=('variant', lambda x: (x == 'DEFAULT').sum())
+            default_count=('variant', lambda x: (x == 'DEFAULT').count())
         ).reset_index()
-
+        
         # Calcular el porcentaje de participantes por día en DEFAULT
-        resultado['default_participation_percent'] = (resultado['default_participants'] / resultado['total_participants']) * 100
+        resultado_diario['default_participation_percent'] = (resultado_diario['default_participants'] / resultado_diario['total_participants']) * 100
 
-        return resultado
+        # Calcular los totales para todo el experimento
+        total_participants = resultado_diario['total_participants'].sum()
+        total_purchases = resultado_diario['total_purchases'].sum()
+        total_default_participants = resultado_diario['default_participants'].sum()
+        total_default_count = resultado_diario['default_count'].sum()
+
+        # Crear un DataFrame para los totales
+        total_data = {
+            'date': ['Total'],
+            'total_participants': [total_participants],
+            'total_purchases': [total_purchases],
+            'default_participants': [total_default_participants],
+            'default_count': [total_default_count],
+            'default_participation_percent': [(total_default_participants / total_participants) * 100]
+        }
+        resultado_total = pd.DataFrame(total_data)
+
+        # Concatenar los resultados diarios con los totales
+        resultado_final = pd.concat([resultado_diario, resultado_total], ignore_index=True)
+
+        return resultado_final
+    
+    def get_experiments_with_high_default(self, threshold=10.0):
+        """
+        Obtiene una lista de experimentos con un porcentaje de participación en DEFAULT superior al umbral dado.
+
+        Parámetros:
+        threshold (float): El porcentaje de umbral para la participación en DEFAULT.
+
+        Retorna:
+        list: Una lista de nombres de experimentos que superan el umbral.
+        """
+        experiments_with_high_default = []
+        for experiment in self.df['experiment'].unique():
+            result = self.default_count(experiment)
+            total_row = result[result['date'] == 'Total']
+            if not total_row.empty and total_row['default_participation_percent'].iloc[0] > threshold:
+                experiments_with_high_default.append(experiment)
+        
+        return experiments_with_high_default
+    
+    def exclude_high_default_experiments(self, high_default_experiments):
+        """
+        Excluye los experimentos de alto valor por defecto del DataFrame original.
+
+        Parámetros:
+        high_default_experiments (list): La lista de experimentos a excluir.
+
+        Retorna:
+        DataFrame: Un DataFrame con los experimentos excluidos.
+        """
+        filtered_df = self.df[~self.df['experiment'].isin(high_default_experiments)]
+        return filtered_df
 
     def ab_test_discreto(self, nombre_experimento):
         """

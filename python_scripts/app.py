@@ -3,6 +3,7 @@ import pandas as pd
 from flask import (Flask, redirect, jsonify, render_template, request,
                    send_from_directory, url_for)
 
+
 app = Flask(__name__)
 
 try:
@@ -19,7 +20,6 @@ app = Flask(__name__)
 def get_experiment_results(exp_name):
 
     print(archivo_valido)
-
     if not archivo_valido:
         return jsonify({'error': 'error en la lectura del archivo'}), 400
 
@@ -43,7 +43,7 @@ def get_experiment_results(exp_name):
     if filtered_results.empty:
         return jsonify({'error': 'experimento no encontrado'}), 404
     
-    # Calculamos los resultados requeridos, en este caso, total de participantes y total de compras
+    # Calculamos los resultados requeridos, en este caso, total de participantes, total de compras y numero de participantes por variante
     total_participants = filtered_results['participants'].sum()
     winners = filtered_results.loc[filtered_results['purchases'].idxmax(), 'variant']
     variants = []
