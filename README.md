@@ -26,7 +26,7 @@ participó del siguiente experimento {experiment_name}, viendo la variante {vari
 
 ### **Solución del reto**
 
-**Nivel 1**
+## **Nivel 1**
 Implementar una query, notebook o algoritmo que pueda leer este dataset y compute para cada experimento del dataset un número de compras asociadas de forma de poder
 comparar cual de las n variantes de cada experimento fue mejor.
 
@@ -57,7 +57,8 @@ En la columna **experiments** se encuentra disponible toda la data de navegació
 
 
 
-**Nivel 2**
+## **Nivel 2**
+
 Implementación de algunos checks correspondientes a la correctitud de los datos y a la confianza que se puede tener en los resultados, la naturaleza y selección de estos tests queda a discreción.
 
 Para la solución  de este segundo punto tenemos dentro de nuestro repositorio: 
@@ -92,14 +93,6 @@ print(experiments_per_day.to_string(index=False))
 3  2021-08-01  HideTransitionModal    6647  3023131  mshops   
 4  2021-08-01  HideTransitionModal    6647  9116431  mshops   
 
-   purchase_funnel_flag  item_id  
-0                     0        0  
-1                     0        0  
-2                     0        0  
-3                     0        0  
-4                     0        0  
-Cantidad única de experimentos : 44
-
 Cantidad única de experimentos por día:
       date  experiment
 2021-08-01          43
@@ -119,20 +112,12 @@ print(experiments_per_day.to_string(index=False))
 ```
 
 (143, 7)
-         date           experiment  variant  participants  purchases  \
+         date           experiment  variant  participants  purchases  
 0  2021-08-01  HideTransitionModal     6646             2          0   
 1  2021-08-01  HideTransitionModal     6647             3          0   
 2  2021-08-01  HideTransitionModal     6993             5          0   
 3  2021-08-01  HideTransitionModal  DEFAULT            12          0   
 4  2021-08-01          address_hub     3574           189        143   
-
-   buy_rate buy_rate_percent  
-0  0.000000            0.00%  
-1  0.000000            0.00%  
-2  0.000000            0.00%  
-3  0.000000            0.00%  
-4  0.756614           75.66%  
-Cantidad única de experimentos : 44
 
 Cantidad única de experimentos por día:
       date  experiment
@@ -175,7 +160,8 @@ El Índice de Estabilidad de Población (PSI) es una métrica utilizada en anál
 **El tiempo no permitió trabjar en contrastes de hipótesis clásico, para validar o rechazar la hipótesis nula, la cual para este caso podría ser, asumir que las dos variantes tienen los mismas tasa de compra o resultados.**
 
 
-**Nivel 3**
+## **Nivel 3**
+
 Implementar un API en el lenguaje de preferencia que permita consultar los resultados de un experimento para un día dado.
 
 Para la solución  de este segundo punto tenemos dentro de nuestro repositorio: 
@@ -186,7 +172,7 @@ Para la solución  de este segundo punto tenemos dentro de nuestro repositorio:
 En el caso particular de la información compartida en nuestra API, es posible poner a disposición del cliente, datos relacionados con los resultados del experimento dentro del universo total
 
 
-**Nivel 4**
+## **Nivel 4**
 
 Hostear dicha API en un proveedor cloud a elección y compartir los detalles de acceso a la misma para poder hacer consultas a dicha API hosteada.
 
