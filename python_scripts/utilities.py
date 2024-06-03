@@ -5,7 +5,6 @@ import matplotlib.pyplot as plt
 import warnings
 import logging
 from bayesian_testing.experiments import DiscreteDataTest, BinaryDataTest
-
 sns.set()
 
 class AnalisisExperimento:
