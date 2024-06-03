@@ -176,6 +176,7 @@ En el caso particular de la información compartida en nuestra API, es posible p
 
 Hostear dicha API en un proveedor cloud a elección y compartir los detalles de acceso a la misma para poder hacer consultas a dicha API hosteada.
 
+[API_Azure](http://pruebamelijmpaiba.azurewebsites.net/experiment/sa-on-vip/result?day=2021-08-01):
 
 Para la solución  de este segundo punto tenemos dentro de nuestro repositorio: 
 1. **[04_lanzamiento_API_azure.ipynb](https://github.com/jmpaiba123/AB_Testing_Meli/blob/main/jupyter_notebooks/04_lanzamiento_API_azure.ipynb):** notebook con el instructivo al detalle para hostear la API en una web de azure.
